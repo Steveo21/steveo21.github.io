@@ -3,22 +3,31 @@
 <head>
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Offensive Python — Research &amp; Writeups</title>
+  <title>Purple Team — Research &amp; Writeups</title>
   <link rel="preconnect" href="https://fonts.googleapis.com" />
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
-  <link href="https://fonts.googleapis.com/css2?family=Share+Tech+Mono&family=DM+Sans:wght@300;400;500&display=swap" rel="stylesheet" />
+  <link href="https://fonts.googleapis.com/css2?family=Space+Mono:wght@400;700&family=Syne:wght@300;400;600&display=swap" rel="stylesheet" />
   <style>
     :root {
-      --bg:      #0a0c0f;
-      --surface: #0f1217;
-      --border:  #1e2530;
-      --accent:  #00ff9d;
-      --text:    #c9d1d9;
-      --muted:   #4a5568;
-      --mono:    'Share Tech Mono', monospace;
-      --sans:    'DM Sans', sans-serif;
+      --bg:        #08070f;
+      --surface:   #0d0b18;
+      --surface2:  #12101f;
+      --border:    #1f1a35;
+      --border2:   #2a2245;
+      --red:       #c084fc;   /* offensive — violet */
+      --blue:      #38bdf8;   /* defensive — sky blue */
+      --red-glow:  rgba(192, 132, 252, 0.18);
+      --blue-glow: rgba(56, 189, 248, 0.14);
+      --text:      #ccc8e8;
+      --muted:     #5a5275;
+      --mono:      'Space Mono', monospace;
+      --sans:      'Syne', sans-serif;
     }
+
     *, *::before, *::after { box-sizing: border-box; margin: 0; padding: 0; }
+
+    html { scroll-behavior: smooth; }
+
     body {
       background: var(--bg);
       color: var(--text);
@@ -27,106 +36,224 @@
       min-height: 100vh;
       overflow-x: hidden;
     }
-    body::before {
+
+    /* ── scanline overlay ── */
+    body::after {
       content: '';
       position: fixed; inset: 0;
-      background: repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(0,0,0,0.04) 2px, rgba(0,0,0,0.04) 4px);
+      background: repeating-linear-gradient(
+        0deg,
+        transparent,
+        transparent 3px,
+        rgba(0,0,0,0.06) 3px,
+        rgba(0,0,0,0.06) 4px
+      );
       pointer-events: none;
-      z-index: 999;
+      z-index: 1000;
     }
-    .grid-bg {
+
+    /* ── dual grid bg ── */
+    .bg-layer {
       position: fixed; inset: 0;
-      background-image:
-        linear-gradient(rgba(0,255,157,0.025) 1px, transparent 1px),
-        linear-gradient(90deg, rgba(0,255,157,0.025) 1px, transparent 1px);
-      background-size: 48px 48px;
-      pointer-events: none;
       z-index: 0;
+      pointer-events: none;
     }
+    .bg-grid {
+      position: absolute; inset: 0;
+      background-image:
+        linear-gradient(rgba(192,132,252,0.03) 1px, transparent 1px),
+        linear-gradient(90deg, rgba(56,189,248,0.03) 1px, transparent 1px);
+      background-size: 52px 52px;
+    }
+    /* diagonal split glow */
+    .bg-split {
+      position: absolute; inset: 0;
+      background: linear-gradient(
+        135deg,
+        rgba(192,132,252,0.06) 0%,
+        transparent 50%,
+        rgba(56,189,248,0.05) 100%
+      );
+    }
+    .bg-orb-left {
+      position: absolute;
+      width: 600px; height: 600px;
+      top: -120px; left: -200px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(192,132,252,0.08) 0%, transparent 70%);
+      filter: blur(60px);
+    }
+    .bg-orb-right {
+      position: absolute;
+      width: 500px; height: 500px;
+      bottom: -100px; right: -160px;
+      border-radius: 50%;
+      background: radial-gradient(circle, rgba(56,189,248,0.07) 0%, transparent 70%);
+      filter: blur(60px);
+    }
+
+    /* ── layout ── */
     .wrap {
       position: relative; z-index: 1;
-      max-width: 860px;
+      max-width: 900px;
       margin: 0 auto;
-      padding: 80px 24px 120px;
+      padding: 72px 24px 120px;
     }
-    header { margin-bottom: 72px; animation: fadeDown 0.7s ease both; }
-    .badge {
-      display: inline-block;
+
+    /* ── header ── */
+    header {
+      margin-bottom: 80px;
+      animation: fadeDown 0.8s cubic-bezier(.16,1,.3,1) both;
+    }
+
+    .eyebrow {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+      margin-bottom: 28px;
+    }
+    .eyebrow-line {
+      display: flex;
+      align-items: center;
+      gap: 0;
+    }
+    .pill-red {
       font-family: var(--mono);
-      font-size: 11px;
-      color: var(--accent);
-      border: 1px solid var(--accent);
-      padding: 3px 10px;
-      letter-spacing: 0.15em;
+      font-size: 10px;
+      letter-spacing: 0.18em;
       text-transform: uppercase;
-      margin-bottom: 20px;
-      position: relative;
-      overflow: hidden;
+      padding: 4px 12px;
+      background: rgba(192,132,252,0.1);
+      border: 1px solid rgba(192,132,252,0.3);
+      color: var(--red);
     }
-    .badge::after {
-      content: '';
-      position: absolute; top: 0; left: -100%;
-      width: 60%; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(0,255,157,0.15), transparent);
-      animation: shimmer 3s ease infinite 1s;
+    .pill-slash {
+      font-family: var(--mono);
+      font-size: 10px;
+      padding: 4px 8px;
+      background: var(--surface2);
+      border-top: 1px solid var(--border2);
+      border-bottom: 1px solid var(--border2);
+      color: var(--muted);
     }
+    .pill-blue {
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.18em;
+      text-transform: uppercase;
+      padding: 4px 12px;
+      background: rgba(56,189,248,0.08);
+      border: 1px solid rgba(56,189,248,0.25);
+      color: var(--blue);
+    }
+
+    .h1-wrap { position: relative; }
     h1 {
       font-family: var(--mono);
-      font-size: clamp(28px, 5vw, 46px);
-      font-weight: 400;
+      font-size: clamp(32px, 6vw, 58px);
+      font-weight: 700;
+      line-height: 1.05;
       color: #fff;
-      line-height: 1.1;
+      letter-spacing: -0.01em;
     }
-    h1 span { color: var(--accent); }
+    h1 .word-purple { color: var(--red); }
+    h1 .word-team   { color: var(--blue); }
+
+    /* animated underline decoration */
+    .h1-deco {
+      display: block;
+      margin-top: 10px;
+      height: 2px;
+      width: 100%;
+      max-width: 520px;
+      background: linear-gradient(90deg, var(--red), var(--blue));
+      transform-origin: left;
+      animation: scaleX 1s cubic-bezier(.16,1,.3,1) 0.4s both;
+    }
+
     .sub {
-      margin-top: 16px;
+      margin-top: 20px;
       font-size: 15px;
       color: var(--muted);
-      max-width: 520px;
-      line-height: 1.6;
+      max-width: 560px;
+      line-height: 1.7;
+      font-weight: 400;
     }
-    .handle {
-      display: inline-flex;
+
+    .meta-row {
+      display: flex;
+      align-items: center;
+      gap: 20px;
+      margin-top: 28px;
+      flex-wrap: wrap;
+    }
+    .meta-item {
+      display: flex;
       align-items: center;
       gap: 8px;
-      margin-top: 24px;
-      font-family: var(--mono);
-      font-size: 13px;
-      color: var(--muted);
-    }
-    .handle::before {
-      content: '';
-      display: block;
-      width: 8px; height: 8px;
-      border-radius: 50%;
-      background: var(--accent);
-      box-shadow: 0 0 8px var(--accent);
-      animation: pulse 2s ease infinite;
-    }
-    .section-label {
       font-family: var(--mono);
       font-size: 11px;
       color: var(--muted);
-      letter-spacing: 0.2em;
+    }
+    .dot-red  { width: 7px; height: 7px; border-radius: 50%; background: var(--red);  box-shadow: 0 0 8px var(--red);  animation: pulse 2.4s ease infinite; }
+    .dot-blue { width: 7px; height: 7px; border-radius: 50%; background: var(--blue); box-shadow: 0 0 8px var(--blue); animation: pulse 2.4s ease infinite 0.8s; }
+    .meta-sep { width: 1px; height: 14px; background: var(--border2); }
+
+    /* ── legend ── */
+    .legend {
+      display: flex;
+      gap: 24px;
+      margin-bottom: 32px;
+      animation: fadeUp 0.6s ease 0.2s both;
+    }
+    .legend-item {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      font-family: var(--mono);
+      font-size: 10px;
+      letter-spacing: 0.12em;
+      text-transform: uppercase;
+      color: var(--muted);
+    }
+    .legend-bar {
+      width: 20px; height: 2px;
+    }
+    .legend-bar.red  { background: var(--red); }
+    .legend-bar.blue { background: var(--blue); }
+    .legend-bar.both { background: linear-gradient(90deg, var(--red), var(--blue)); }
+
+    /* ── section label ── */
+    .section-label {
+      font-family: var(--mono);
+      font-size: 10px;
+      color: var(--muted);
+      letter-spacing: 0.25em;
       text-transform: uppercase;
       display: flex;
       align-items: center;
       gap: 14px;
-      margin-bottom: 28px;
+      margin-bottom: 20px;
     }
-    .section-label::after { content: ''; flex: 1; height: 1px; background: var(--border); }
-    .cards { display: flex; flex-direction: column; gap: 16px; }
+    .section-label::before { content: '//'; color: var(--red); opacity: 0.6; }
+    .section-label::after  { content: ''; flex: 1; height: 1px; background: var(--border); }
+
+    /* ── cards ── */
+    .cards { display: flex; flex-direction: column; gap: 12px; }
+
     .card {
       background: var(--surface);
       border: 1px solid var(--border);
-      padding: 28px 32px;
+      padding: 24px 28px;
       position: relative;
       overflow: hidden;
-      transition: border-color 0.25s, transform 0.2s;
       text-decoration: none;
       display: block;
-      animation: fadeUp 0.6s ease both;
+      transition: border-color 0.3s, transform 0.2s, background 0.3s;
+      animation: fadeUp 0.6s cubic-bezier(.16,1,.3,1) both;
     }
+
+    /* stagger */
     .card:nth-child(1) { animation-delay: 0.05s; }
     .card:nth-child(2) { animation-delay: 0.10s; }
     .card:nth-child(3) { animation-delay: 0.15s; }
@@ -135,81 +262,200 @@
     .card:nth-child(6) { animation-delay: 0.30s; }
     .card:nth-child(7) { animation-delay: 0.35s; }
     .card:nth-child(8) { animation-delay: 0.40s; }
-    .card:nth-child(9) { animation-delay: 0.45s; }
+    .card:nth-child(9)  { animation-delay: 0.45s; }
+    .card:nth-child(10) { animation-delay: 0.50s; }
+    .card:nth-child(11) { animation-delay: 0.55s; }
+
+    /* left accent bar — defaults to red */
     .card::before {
       content: '';
       position: absolute; top: 0; left: 0;
       width: 3px; height: 0;
-      background: var(--accent);
-      transition: height 0.3s ease;
+      background: var(--red);
+      transition: height 0.35s ease;
     }
-    .card:hover { border-color: rgba(0,255,157,0.35); transform: translateX(4px); }
+    .card.blue-card::before  { background: var(--blue); }
+    .card.both-card::before  { background: linear-gradient(180deg, var(--red), var(--blue)); }
+
+    /* glow on hover */
+    .card::after {
+      content: '';
+      position: absolute; inset: 0;
+      background: var(--red-glow);
+      opacity: 0;
+      transition: opacity 0.3s;
+      pointer-events: none;
+    }
+    .card.blue-card::after { background: var(--blue-glow); }
+    .card.both-card::after { background: linear-gradient(135deg, var(--red-glow), var(--blue-glow)); }
+
+    .card:hover {
+      border-color: rgba(192,132,252,0.3);
+      transform: translateX(6px);
+    }
+    .card.blue-card:hover { border-color: rgba(56,189,248,0.25); }
+    .card.both-card:hover { border-color: rgba(192,132,252,0.25); }
+
     .card:hover::before { height: 100%; }
-    .card-inner { display: flex; align-items: flex-start; gap: 24px; }
+    .card:hover::after  { opacity: 1; }
+
+    .card-inner {
+      display: flex;
+      align-items: flex-start;
+      gap: 20px;
+      position: relative; /* above ::after */
+      z-index: 1;
+    }
+
     .card-num {
       font-family: var(--mono);
       font-size: 11px;
-      color: var(--accent);
+      color: var(--red);
       opacity: 0.5;
       flex-shrink: 0;
-      padding-top: 4px;
-      width: 24px;
+      padding-top: 3px;
+      width: 22px;
     }
+    .card.blue-card .card-num { color: var(--blue); }
+    .card.both-card .card-num { color: var(--red); }
+
     .card-body { flex: 1; }
-    .card-title { font-size: 17px; font-weight: 500; color: #fff; margin-bottom: 6px; line-height: 1.3; }
-    .card-desc { font-size: 14px; color: var(--muted); line-height: 1.6; margin-bottom: 14px; }
+
+    .card-title {
+      font-size: 16px;
+      font-weight: 600;
+      color: #fff;
+      margin-bottom: 5px;
+      line-height: 1.35;
+    }
+
+    .card-desc {
+      font-size: 13px;
+      color: var(--muted);
+      line-height: 1.65;
+      margin-bottom: 14px;
+      font-weight: 400;
+    }
+
     .tags { display: flex; flex-wrap: wrap; gap: 6px; }
     .tag {
       font-family: var(--mono);
-      font-size: 10px;
+      font-size: 9px;
       padding: 3px 8px;
-      border: 1px solid var(--border);
+      border: 1px solid var(--border2);
       color: var(--muted);
-      letter-spacing: 0.08em;
+      letter-spacing: 0.1em;
       text-transform: uppercase;
       transition: border-color 0.2s, color 0.2s;
     }
-    .card:hover .tag { border-color: rgba(0,255,157,0.2); color: rgba(0,255,157,0.6); }
+    .card:hover .tag       { border-color: rgba(192,132,252,0.25); color: rgba(192,132,252,0.7); }
+    .card.blue-card:hover .tag { border-color: rgba(56,189,248,0.2); color: rgba(56,189,248,0.65); }
+    .card.both-card:hover .tag { border-color: rgba(192,132,252,0.25); color: rgba(192,132,252,0.7); }
+
     .card-arrow {
       font-family: var(--mono);
-      font-size: 18px;
+      font-size: 16px;
       color: var(--muted);
       flex-shrink: 0;
       transition: color 0.2s, transform 0.2s;
       padding-top: 2px;
     }
-    .card:hover .card-arrow { color: var(--accent); transform: translateX(4px); }
+    .card:hover .card-arrow            { color: var(--red); transform: translateX(4px); }
+    .card.blue-card:hover .card-arrow  { color: var(--blue); }
+    .card.both-card:hover .card-arrow  { color: var(--red); }
+
+    /* ── footer ── */
     footer {
-      margin-top: 80px;
-      padding-top: 32px;
+      margin-top: 72px;
+      padding-top: 28px;
       border-top: 1px solid var(--border);
       display: flex;
       justify-content: space-between;
+      align-items: center;
+      flex-wrap: wrap;
+      gap: 12px;
       animation: fadeUp 0.6s ease 0.5s both;
     }
-    .footer-mono { font-family: var(--mono); font-size: 12px; color: var(--muted); }
-    .footer-mono span { color: var(--accent); }
-    @keyframes fadeDown { from { opacity:0; transform:translateY(-20px); } to { opacity:1; transform:translateY(0); } }
-    @keyframes fadeUp   { from { opacity:0; transform:translateY(20px);  } to { opacity:1; transform:translateY(0); } }
-    @keyframes pulse    { 0%,100% { opacity:1; transform:scale(1); } 50% { opacity:0.4; transform:scale(0.85); } }
-    @keyframes shimmer  { 0% { left:-100%; } 100% { left:200%; } }
+    .footer-mono {
+      font-family: var(--mono);
+      font-size: 11px;
+      color: var(--muted);
+    }
+    .footer-mono .r { color: var(--red); }
+    .footer-mono .b { color: var(--blue); }
+
+    .footer-spectrum {
+      height: 2px;
+      width: 120px;
+      background: linear-gradient(90deg, var(--red), var(--blue));
+      opacity: 0.5;
+    }
+
+    /* ── keyframes ── */
+    @keyframes fadeDown {
+      from { opacity:0; transform:translateY(-24px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes fadeUp {
+      from { opacity:0; transform:translateY(20px); }
+      to   { opacity:1; transform:translateY(0); }
+    }
+    @keyframes pulse {
+      0%,100% { opacity:1; transform:scale(1); }
+      50%      { opacity:0.35; transform:scale(0.8); }
+    }
+    @keyframes scaleX {
+      from { transform:scaleX(0); }
+      to   { transform:scaleX(1); }
+    }
   </style>
 </head>
 <body>
-  <div class="grid-bg"></div>
+  <div class="bg-layer">
+    <div class="bg-grid"></div>
+    <div class="bg-split"></div>
+    <div class="bg-orb-left"></div>
+    <div class="bg-orb-right"></div>
+  </div>
+
   <div class="wrap">
 
     <header>
-      <div class="badge">// research &amp; writeups</div>
-      <h1>Offensive<br/><span>Security</span> Notes</h1>
-      <p class="sub">Practical research on Windows malware development, initial access tradecraft, detection engineering, and offensive Python. All techniques tested in isolated lab environments.</p>
-      <div class="handle">Seth &mdash; Augusta, GA</div>
+      <div class="eyebrow">
+        <div class="eyebrow-line">
+          <div class="pill-red">Red Team</div>
+          <div class="pill-slash">&#x2F;&#x2F;</div>
+          <div class="pill-blue">Blue Team</div>
+        </div>
+      </div>
+
+      <div class="h1-wrap">
+        <h1><span class="word-purple">Purple</span> <span class="word-team">Team</span><br/>Research &amp; Writeups</h1>
+        <span class="h1-deco"></span>
+      </div>
+
+      <p class="sub">Offensive tradecraft meets detection engineering. Practical research on Windows malware development, initial access, EASM, and adversarial simulation — written for practitioners on both sides of the wire.</p>
+
+      <div class="meta-row">
+        <div class="meta-item"><span class="dot-red"></span> Offensive</div>
+        <div class="meta-sep"></div>
+        <div class="meta-item"><span class="dot-blue"></span> Defensive</div>
+        <div class="meta-sep"></div>
+        <div class="meta-item">Seth &mdash; Augusta, GA</div>
+      </div>
     </header>
+
+    <div class="legend">
+      <div class="legend-item"><span class="legend-bar red"></span> Offensive</div>
+      <div class="legend-item"><span class="legend-bar blue"></span> Defensive</div>
+      <div class="legend-item"><span class="legend-bar both"></span> Purple</div>
+    </div>
 
     <div class="section-label">Published</div>
 
     <div class="cards">
 
+      <!-- OFFENSIVE cards — default (red) -->
       <a class="card" href="https://steveo21.github.io/Automating%20Shellcode%20Patching.pdf" target="_blank" rel="noopener">
         <div class="card-inner">
           <div class="card-num">01</div>
@@ -252,7 +498,8 @@
         </div>
       </a>
 
-      <a class="card" href="https://steveo21.github.io/Hypothesis%20Driven%20Malware%20Analysis.pdf" target="_blank" rel="noopener">
+      <!-- BOTH (purple) card -->
+      <a class="card both-card" href="https://steveo21.github.io/Hypothesis%20Driven%20Malware%20Analysis.pdf" target="_blank" rel="noopener">
         <div class="card-inner">
           <div class="card-num">04</div>
           <div class="card-body">
@@ -280,7 +527,8 @@
         </div>
       </a>
 
-      <a class="card" href="https://steveo21.github.io/Pitfalls%20of%20Passive%20Threat%20Hunting%20and%20Tool%20Reliance.pdf" target="_blank" rel="noopener">
+      <!-- DEFENSIVE (blue) cards -->
+      <a class="card blue-card" href="https://steveo21.github.io/Pitfalls%20of%20Passive%20Threat%20Hunting%20and%20Tool%20Reliance.pdf" target="_blank" rel="noopener">
         <div class="card-inner">
           <div class="card-num">06</div>
           <div class="card-body">
@@ -308,7 +556,7 @@
         </div>
       </a>
 
-      <a class="card" href="https://steveo21.github.io/ReverseEngineeringPocketGuide.pdf" target="_blank" rel="noopener">
+      <a class="card both-card" href="https://steveo21.github.io/ReverseEngineeringPocketGuide.pdf" target="_blank" rel="noopener">
         <div class="card-inner">
           <div class="card-num">08</div>
           <div class="card-body">
@@ -322,9 +570,23 @@
         </div>
       </a>
 
-      <a class="card" href="https://steveo21.github.io/Sneak%20Peak%20of%20Detection%20Engineering.pdf" target="_blank" rel="noopener">
+      <a class="card blue-card" href="https://steveo21.github.io/Road_to_Purple_Team_Glory__KQL_101.pdf" target="_blank" rel="noopener">
         <div class="card-inner">
-          <div class="card-num">09</div>
+          <div class="card-num">10</div>
+          <div class="card-body">
+            <div class="card-title">Road to Purple Team Glory: KQL 101</div>
+            <div class="card-desc">A practitioner's intro to Kusto Query Language via the KC7 Cyber platform &mdash; covering ADX fundamentals, essential operators (take, where, project, top, let), and the investigator mindset for hunting threats in log data.</div>
+            <div class="tags">
+              <span class="tag">KQL</span><span class="tag">Azure Data Explorer</span><span class="tag">Threat Hunting</span><span class="tag">Blue Team</span><span class="tag">KC7</span>
+            </div>
+          </div>
+          <div class="card-arrow">&#8594;</div>
+        </div>
+      </a>
+
+      <a class="card blue-card" href="https://steveo21.github.io/Sneak%20Peak%20of%20Detection%20Engineering.pdf" target="_blank" rel="noopener">
+        <div class="card-inner">
+          <div class="card-num">11</div>
           <div class="card-body">
             <div class="card-title">Sneak Peak of Detection Engineering</div>
             <div class="card-desc">An introductory look at detection engineering &mdash; how defenders build robust, maintainable detections and what offensive operators should understand about how they get caught.</div>
@@ -339,11 +601,11 @@
     </div>
 
     <footer>
-      <div class="footer-mono">// <span>offensive-python</span> &mdash; research for educational purposes</div>
+      <div class="footer-mono">// <span class="r">red</span> meets <span class="b">blue</span> &mdash; for educational purposes</div>
+      <div class="footer-spectrum"></div>
       <div class="footer-mono">2026</div>
     </footer>
 
   </div>
 </body>
 </html>
-
